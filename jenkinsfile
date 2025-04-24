@@ -20,28 +20,26 @@ pipeline {
             }
         }
        stage('Test') {
-            steps {
-                dir('flask-app-ci-cd') {
-                    powershell "docker stop test_app -ErrorAction SilentlyContinue"
-                    powershell "docker rm test_app -ErrorAction SilentlyContinue"
+            steps{
+                    powershell "docker stop test_app; exit 0"
+                    powershell "docker rm test_app; exit 0"
                     powershell "docker run -d --name test_app -p 5000:5000 ${imageName}"
                     powershell "Start-Sleep -Seconds 5"
                     powershell "try { Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String 'Hello, World!' } catch { exit 1 }"
                     powershell "docker stop test_app"
                     powershell "docker rm test_app"
-                }
+                
             }
         }
         stage('Deploy to Staging') {
             steps {
-                dir('flask-app-ci-cd') {
                     powershell "docker stop staging_app -ErrorAction SilentlyContinue"
                     powershell "docker rm staging_app -ErrorAction SilentlyContinue"
                     powershell "docker pull ${registryUsername}/${imageName}:latest"
                     powershell "docker run -d --name staging_app -p 5001:5000 ${registryUsername}/${imageName}:latest"
                     powershell "Start-Sleep -Seconds 5"
                     powershell "try { Invoke-WebRequest -Uri http://localhost:5001 -UseBasicParsing | Select-String 'Hello, World!' } catch { exit 1 }"
-                }
+                
             }
         }
         stage('Manual Approval') {
@@ -51,14 +49,13 @@ pipeline {
         }
         stage('Deploy to Production') {
             steps {
-                dir('flask-app-ci-cd') {
                     powershell "docker stop production_app -ErrorAction SilentlyContinue"
                     powershell "docker rm production_app -ErrorAction SilentlyContinue"
                     powershell "docker pull ${registryUsername}/${imageName}:latest"
                     powershell "docker run -d --name production_app -p 5000:5000 ${registryUsername}/${imageName}:latest"
                     powershell "Start-Sleep -Seconds 5"
                     powershell "try { Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String 'Hello, World!' } catch { exit 1 }"
-                }
+                
             }
         }
     }
