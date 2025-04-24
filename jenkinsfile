@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+    environment {
+        imageName = 'myflaskapp'
+        registryUsername = 'yourusername'
+    }
+    stages {
+        stage('Login to Docker Hub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                    powershell "docker login -u \$env:USERNAME -p \$env:PASSWORD"
+                }
+            }
+        }
+        stage('Build') {
+            steps {
+                powershell "docker build -t ${imageName} ."
+                powershell "docker tag ${imageName} ${registryUsername}/${imageName}"
+                powershell "docker push ${registryUsername}/${imageName}"
+            }
+        }
+        stage('Test') {
+            steps {
+                powershell 'docker stop test_app || exit 0'
+                powershell 'docker rm test_app || exit 0'
+                powershell "docker run -d --name test_app -p 5000:5000 ${imageName}"
+                powershell 'Start-Sleep -Seconds 5'
+                powershell 'Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String "Hello, World!"'
+                powershell 'docker stop test_app'
+                powershell 'docker rm test_app'
+            }
+        }
+        stage('Deploy to Staging') {
+            steps {
+                powershell 'docker stop staging_app || exit 0'
+                powershell 'docker rm staging_app || exit 0'
+                powershell "docker pull ${registryUsername}/${imageName}"
+                powershell "docker run -d --name staging_app -p 5001:5000 ${registryUsername}/${imageName}"
+                powershell 'Start-Sleep -Seconds 5'
+                powershell 'Invoke-WebRequest -Uri http://localhost:5001 -UseBasicParsing | Select-String "Hello, World!"'
+            }
+        }
+        stage('Manual Approval') {
+            steps {
+                input 'Approve deployment to production?'
+            }
+        }
+        stage('Deploy to Production') {
+            steps {
+                powershell 'docker stop production_app || exit 0'
+                powershell 'docker rm production_app || exit 0'
+                powershell "docker pull ${registryUsername}/${imageName}"
+                powershell "docker run -d --name production_app -p 5000:5000 ${registryUsername}/${imageName}"
+                powershell 'Start-Sleep -Seconds 5'
+                powershell 'Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String "Hello, World!"'
+            }
+        }
+    }
+}
