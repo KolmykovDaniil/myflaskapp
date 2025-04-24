@@ -21,8 +21,8 @@ pipeline {
         }
        stage('Test') {
             steps{
-                    powershell "docker stop test_app; exit 0"
-                    powershell "docker rm test_app; exit 0"
+                    powershell "docker stop test_app"
+                    powershell "docker rm test_app"
                     powershell "docker run -d --name test_app -p 5000:5000 ${imageName}"
                     powershell "Start-Sleep -Seconds 5"
                     powershell "try { Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String 'Hello, World!' } catch { exit 1 }"
