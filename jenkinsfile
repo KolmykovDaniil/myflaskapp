@@ -21,8 +21,6 @@ pipeline {
         }
        stage('Test') {
             steps{
-                    powershell "docker stop test_app"
-                    powershell "docker rm test_app"
                     powershell "docker run -d --name test_app -p 5000:5000 ${imageName}"
                     powershell "Start-Sleep -Seconds 5"
                     powershell "try { Invoke-WebRequest -Uri http://localhost:5000 -UseBasicParsing | Select-String 'Hello, World!' } catch { exit 1 }"
@@ -33,8 +31,6 @@ pipeline {
         }
         stage('Deploy to Staging') {
             steps {
-                    powershell "docker stop staging_app -ErrorAction SilentlyContinue"
-                    powershell "docker rm staging_app -ErrorAction SilentlyContinue"
                     powershell "docker pull ${registryUsername}/${imageName}:latest"
                     powershell "docker run -d --name staging_app -p 5001:5000 ${registryUsername}/${imageName}:latest"
                     powershell "Start-Sleep -Seconds 5"
@@ -49,8 +45,7 @@ pipeline {
         }
         stage('Deploy to Production') {
             steps {
-                    powershell "docker stop production_app -ErrorAction SilentlyContinue"
-                    powershell "docker rm production_app -ErrorAction SilentlyContinue"
+
                     powershell "docker pull ${registryUsername}/${imageName}:latest"
                     powershell "docker run -d --name production_app -p 5000:5000 ${registryUsername}/${imageName}:latest"
                     powershell "Start-Sleep -Seconds 5"
